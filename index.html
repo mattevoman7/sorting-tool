@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0f1117" />
+<title>Bin Tipping Log</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1117; --surface: #181c25; --surface2: #1e2330;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+    --text: #eef0f4; --muted: #7a8094; --accent: #4ade80; --warn: #fb923c;
+  }
+  html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+  .screen { display: none; min-height: 100vh; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  /* ── START SCREEN ── */
+  .start-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 40px 28px; }
+  .start-wrap h1 { font-size: 12px; font-weight: 400; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-family: 'DM Mono', monospace; margin-bottom: 6px; }
+  .start-wrap h2 { font-size: 28px; font-weight: 300; line-height: 1.2; margin-bottom: 40px; }
+  .field-label { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; display: block; }
+  .big-input { width: 100%; background: var(--surface); border: 0.5px solid var(--border2); border-radius: 14px; padding: 16px 20px; font-size: 26px; font-weight: 300; color: var(--text); font-family: 'DM Mono', monospace; outline: none; -webkit-appearance: none; }
+  .big-input::placeholder { color: var(--muted); }
+  .start-btn { margin-top: 20px; width: 100%; padding: 18px; background: var(--accent); border: none; border-radius: 14px; font-size: 16px; font-weight: 500; color: #0f1117; cursor: pointer; -webkit-tap-highlight-color: transparent; font-family: 'DM Sans', sans-serif; }
+  .start-btn:active { opacity: 0.85; }
+
+  /* ── LOG SCREEN ── */
+  .log-header { padding: 52px 20px 16px; border-bottom: 0.5px solid var(--border); }
+  .log-header .bin-id { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; }
+  .log-header .bin-val { font-size: 20px; font-weight: 500; font-family: 'DM Mono', monospace; }
+  .total-bar { padding: 14px 20px; border-bottom: 0.5px solid var(--border); display: flex; justify-content: space-between; align-items: baseline; }
+  .total-bar .lbl { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .total-bar .val { font-size: 26px; font-weight: 400; font-family: 'DM Mono', monospace; color: var(--accent); }
+  .total-bar .unit { font-size: 13px; color: var(--muted); font-family: 'DM Mono', monospace; margin-left: 5px; }
+  .sec-title { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 16px 20px 10px; }
+  .mat-list { padding: 0 20px; flex: 1; }
+  .mat-item { background: var(--surface); border: 0.5px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; transition: border-color 0.15s, background 0.15s; }
+  .mat-item.active { border-color: var(--border2); background: var(--surface2); }
+  .mat-top { display: flex; align-items: center; justify-content: space-between; }
+  .mat-name { font-size: 15px; font-weight: 500; color: var(--text); }
+  .mat-item.inactive .mat-name { color: var(--muted); }
+  .mat-controls { display: flex; align-items: center; }
+  .sbtn { width: 48px; height: 48px; border-radius: 10px; border: 0.5px solid var(--border2); background: var(--surface2); color: var(--text); font-size: 24px; font-weight: 300; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; }
+  .sbtn:active { background: var(--border2); }
+  .sval { font-size: 22px; font-family: 'DM Mono', monospace; color: var(--text); min-width: 52px; text-align: center; }
+  .mat-item.inactive .sval { color: var(--muted); }
+  .step-row { display: flex; gap: 6px; margin-top: 10px; }
+  .stbtn { height: 28px; padding: 0 12px; border-radius: 6px; border: 0.5px solid var(--border2); background: transparent; color: var(--muted); font-size: 12px; font-family: 'DM Mono', monospace; cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; }
+  .stbtn.on { background: var(--border2); color: var(--text); }
+  .mat-result { margin-top: 12px; padding-top: 10px; border-top: 0.5px solid var(--border); display: none; justify-content: space-between; align-items: baseline; }
+  .mat-result .rlbl { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .mat-result .rval { font-size: 18px; font-weight: 500; font-family: 'DM Mono', monospace; color: var(--accent); }
+  .bar-track { height: 3px; background: var(--border); border-radius: 2px; margin-top: 8px; display: none; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; transition: width 0.2s; }
+  .done-btn-wrap { padding: 20px; }
+  .done-btn { width: 100%; padding: 18px; background: var(--accent); border: none; border-radius: 14px; font-size: 16px; font-weight: 500; color: #0f1117; cursor: pointer; -webkit-tap-highlight-color: transparent; font-family: 'DM Sans', sans-serif; }
+  .done-btn:active { opacity: 0.85; }
+
+  /* ── SUMMARY SCREEN ── */
+  .sum-header { padding: 52px 20px 16px; border-bottom: 0.5px solid var(--border); }
+  .sum-header .lbl { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; }
+  .sum-header .bin-val { font-size: 20px; font-weight: 500; font-family: 'DM Mono', monospace; }
+  .sum-header .ts { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 4px; }
+  .sum-total { padding: 16px 20px; border-bottom: 0.5px solid var(--border); display: flex; justify-content: space-between; align-items: baseline; }
+  .sum-total .lbl { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .sum-total .val { font-size: 28px; font-weight: 400; font-family: 'DM Mono', monospace; color: var(--accent); }
+  .sum-total .unit { font-size: 13px; color: var(--muted); font-family: 'DM Mono', monospace; margin-left: 5px; }
+  .sum-list { padding: 16px 20px; flex: 1; }
+  .sum-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 0.5px solid var(--border); }
+  .sum-row:last-child { border-bottom: none; }
+  .sum-mat { font-size: 15px; font-weight: 500; }
+  .sum-right { text-align: right; }
+  .sum-weight { font-size: 16px; font-weight: 500; font-family: 'DM Mono', monospace; color: var(--accent); }
+  .sum-bins { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
+  .sum-actions { padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+  .new-btn { width: 100%; padding: 18px; background: var(--accent); border: none; border-radius: 14px; font-size: 16px; font-weight: 500; color: #0f1117; cursor: pointer; -webkit-tap-highlight-color: transparent; font-family: 'DM Sans', sans-serif; }
+  .new-btn:active { opacity: 0.85; }
+  .copy-btn { width: 100%; padding: 16px; background: transparent; border: 0.5px solid var(--border2); border-radius: 14px; font-size: 15px; font-weight: 400; color: var(--text); cursor: pointer; -webkit-tap-highlight-color: transparent; font-family: 'DM Sans', sans-serif; }
+  .copy-btn:active { background: var(--surface2); }
+  .copy-btn.copied { color: var(--accent); border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- START SCREEN -->
+<div class="screen active" id="screen-start">
+  <div class="start-wrap">
+    <h1>Waste Management</h1>
+    <h2>Bin tipping<br>log</h2>
+    <span class="field-label">Large bin ID</span>
+    <input class="big-input" id="bin-id-input" type="text" placeholder="e.g. BIN-042" autocomplete="off" autocorrect="off" spellcheck="false" />
+    <button class="start-btn" onclick="startSession()">Start tipping &#8594;</button>
+  </div>
+</div>
+
+<!-- LOG SCREEN -->
+<div class="screen" id="screen-log">
+  <div class="log-header">
+    <div class="bin-id">Large bin</div>
+    <div class="bin-val" id="log-bin-id">&#8212;</div>
+    <div class="ts" id="log-ts"></div>
+  </div>
+  <div class="total-bar">
+    <span class="lbl">Est. total weight</span>
+    <span><span class="val" id="grand-total">0.00</span><span class="unit">t</span></span>
+  </div>
+  <div class="sec-title">Tap + for each 2m&#179; bin tipped</div>
+  <div class="mat-list" id="mat-list"></div>
+  <div class="done-btn-wrap">
+    <button class="done-btn" onclick="showSummary()">Done &mdash; view summary</button>
+  </div>
+</div>
+
+<!-- SUMMARY SCREEN -->
+<div class="screen" id="screen-summary">
+  <div class="sum-header">
+    <div class="lbl">Large bin</div>
+    <div class="bin-val" id="sum-bin-id">&#8212;</div>
+    <div class="ts" id="sum-ts"></div>
+  </div>
+  <div class="sum-total">
+    <span class="lbl">Est. total weight</span>
+    <span><span class="val" id="sum-total-val">0.00</span><span class="unit">t</span></span>
+  </div>
+  <div class="sum-list" id="sum-list"></div>
+  <div class="sum-actions">
+    <button class="copy-btn" id="copy-btn" onclick="copyText()">Copy summary</button>
+    <button class="new-btn" onclick="newSession()">Start new bin &#8594;</button>
+  </div>
+</div>
+
+<script>
+var MATS = [
+  { name: "Concrete",     density: 0.9849, color: "#9ca3af" },
+  { name: "Metal",        density: 0.2703, color: "#60a5fa" },
+  { name: "Plasterboard", density: 0.2364, color: "#a78bfa" },
+  { name: "PE",           density: 0.2089, color: "#34d399" },
+  { name: "Timber",       density: 0.1256, color: "#fbbf24" },
+  { name: "PVC",          density: 0.0854, color: "#f9a8d4" },
+  { name: "Cardboard",    density: 0.0362, color: "#fdba74" }
+];
+
+var bins = MATS.map(function() { return 0; });
+var stepSizes = MATS.map(function() { return 1; });
+var sessionBinId = '';
+
+function show(id) {
+  ['screen-start','screen-log','screen-summary'].forEach(function(s) {
+    document.getElementById(s).classList.remove('active');
+  });
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function startSession() {
+  var id = document.getElementById('bin-id-input').value.trim();
+  if (!id) { document.getElementById('bin-id-input').focus(); return; }
+  sessionBinId = id;
+  bins = MATS.map(function() { return 0; });
+  stepSizes = MATS.map(function() { return 1; });
+  buildList();
+  var now = new Date();
+  var ts = now.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })
+    + ' ' + now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('log-ts').textContent = ts;
+  document.getElementById('log-bin-id').textContent = sessionBinId;
+  document.getElementById('grand-total').textContent = '0.00';
+  show('screen-log');
+}
+
+function fmt(v) {
+  if (v === Math.floor(v)) return String(v);
+  if (Math.round(v * 100) % 50 === 0) return v.toFixed(1);
+  return v.toFixed(2);
+}
+
+function buildList() {
+  var list = document.getElementById('mat-list');
+  list.innerHTML = '';
+  MATS.forEach(function(m, i) {
+    var el = document.createElement('div');
+    el.className = 'mat-item inactive';
+    el.id = 'item-' + i;
+    el.innerHTML =
+      '<div class="mat-top">' +
+        '<div class="mat-name">' + m.name + '</div>' +
+        '<div class="mat-controls">' +
+          '<button class="sbtn" ontouchstart="" onclick="adj(' + i + ',-1)">&#8722;</button>' +
+          '<div class="sval" id="sv-' + i + '">0</div>' +
+          '<button class="sbtn" ontouchstart="" onclick="adj(' + i + ',1)">+</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="step-row">' +
+        '<button class="stbtn on" id="st1-' + i + '" ontouchstart="" onclick="setStep(' + i + ',1)">step 1</button>' +
+        '<button class="stbtn" id="st05-' + i + '" ontouchstart="" onclick="setStep(' + i + ',0.5)">&#189;</button>' +
+        '<button class="stbtn" id="st025-' + i + '" ontouchstart="" onclick="setStep(' + i + ',0.25)">&#188;</button>' +
+      '</div>' +
+      '<div class="mat-result" id="res-' + i + '">' +
+        '<span class="rlbl">est. weight</span>' +
+        '<span class="rval" id="rval-' + i + '">&#8212;</span>' +
+      '</div>' +
+      '<div class="bar-track" id="bar-' + i + '">' +
+        '<div class="bar-fill" id="barf-' + i + '" style="width:0%;background:' + m.color + ';"></div>' +
+      '</div>';
+    list.appendChild(el);
+  });
+}
+
+function setStep(i, s) {
+  stepSizes[i] = s;
+  [1, 0.5, 0.25].forEach(function(v) {
+    var id = v === 1 ? 'st1-' : v === 0.5 ? 'st05-' : 'st025-';
+    document.getElementById(id + i).className = 'stbtn' + (v === s ? ' on' : '');
+  });
+}
+
+function adj(i, dir) {
+  bins[i] = Math.max(0, Math.round((bins[i] + dir * stepSizes[i]) * 100) / 100);
+  document.getElementById('sv-' + i).textContent = fmt(bins[i]);
+  document.getElementById('item-' + i).className = 'mat-item ' + (bins[i] > 0 ? 'active' : 'inactive');
+  calc();
+}
+
+function calc() {
+  var weights = MATS.map(function(m, i) { return bins[i] * 2 * m.density; });
+  var grandTotal = weights.reduce(function(a, b) { return a + b; }, 0);
+  var maxW = Math.max.apply(null, weights.concat([0.001]));
+  document.getElementById('grand-total').textContent = grandTotal.toFixed(2);
+  MATS.forEach(function(m, i) {
+    var resEl = document.getElementById('res-' + i);
+    var barEl = document.getElementById('bar-' + i);
+    var rvalEl = document.getElementById('rval-' + i);
+    var barFill = document.getElementById('barf-' + i);
+    if (bins[i] > 0) {
+      resEl.style.display = 'flex';
+      barEl.style.display = 'block';
+      rvalEl.textContent = weights[i].toFixed(2) + ' t';
+      barFill.style.width = ((weights[i] / maxW) * 100).toFixed(1) + '%';
+    } else {
+      resEl.style.display = 'none';
+      barEl.style.display = 'none';
+    }
+  });
+}
+
+function showSummary() {
+  var weights = MATS.map(function(m, i) { return bins[i] * 2 * m.density; });
+  var grandTotal = weights.reduce(function(a, b) { return a + b; }, 0);
+  var now = new Date();
+  var ts = now.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })
+    + ' ' + now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+
+  document.getElementById('sum-bin-id').textContent = sessionBinId;
+  document.getElementById('sum-ts').textContent = ts;
+  document.getElementById('sum-total-val').textContent = grandTotal.toFixed(2);
+
+  var list = document.getElementById('sum-list');
+  list.innerHTML = '';
+  MATS.forEach(function(m, i) {
+    if (bins[i] === 0) return;
+    var row = document.createElement('div');
+    row.className = 'sum-row';
+    row.innerHTML =
+      '<div class="sum-mat">' + m.name + '</div>' +
+      '<div class="sum-right">' +
+        '<div class="sum-weight">' + weights[i].toFixed(2) + ' t</div>' +
+        '<div class="sum-bins">' + fmt(bins[i]) + ' x 2m&#179;</div>' +
+      '</div>';
+    list.appendChild(row);
+  });
+
+  document.getElementById('copy-btn').textContent = 'Copy summary';
+  document.getElementById('copy-btn').classList.remove('copied');
+  show('screen-summary');
+}
+
+function copyText() {
+  var weights = MATS.map(function(m, i) { return bins[i] * 2 * m.density; });
+  var grandTotal = weights.reduce(function(a, b) { return a + b; }, 0);
+  var now = new Date();
+  var ts = now.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })
+    + ' ' + now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+  var lines = ['Bin: ' + sessionBinId, 'Date: ' + ts, ''];
+  MATS.forEach(function(m, i) {
+    if (bins[i] === 0) return;
+    lines.push(m.name + ': ' + weights[i].toFixed(2) + ' t (' + fmt(bins[i]) + ' x 2m\u00B3)');
+  });
+  lines.push('');
+  lines.push('Total: ' + grandTotal.toFixed(2) + ' t');
+  var text = lines.join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      var btn = document.getElementById('copy-btn');
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+    });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    var btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+  }
+}
+
+function newSession() {
+  document.getElementById('bin-id-input').value = '';
+  show('screen-start');
+}
+</script>
+</body>
+</html>
